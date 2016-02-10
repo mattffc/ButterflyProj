@@ -1,0 +1,9 @@
+[global]
+device = gpu
+floatX = float32
+
+[cuda]
+root = C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+
+[nvcc]
+flags = --use-local-env  --cl-version=2008
