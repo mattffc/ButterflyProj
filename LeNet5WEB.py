@@ -27,7 +27,7 @@ import timeit
 import copy
 
 import numpy
-import pickle
+from pickle import loads
 import theano
 import theano.tensor as T
 import matplotlib.cm as cm
@@ -35,15 +35,15 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from theano.tensor.signal import downsample
 from theano.tensor.nnet import conv
-'''
-from leNetpack import logistic_sgd.LogisticRegression as logistic_sgd
-from leNetpack import logistic_sgd.load_data as load_data
-from leNetpack import mlp.HiddenLayer as HiddenLayer
-from leNetpack import PIL.Image as Image
-'''
-from logistic_sgd import LogisticRegression, load_data
-from mlp import HiddenLayer
-from PIL import Image
+
+from leNetpack.logistic_sgd import LogisticRegression,load_data
+
+from leNetpack.mlp import HiddenLayer
+from leNetpack.imageFormat import cropImages
+
+#from logistic_sgd import LogisticRegression, load_data
+#from mlp import HiddenLayer
+#from PIL import Image
 
 
 class LeNetConvPoolLayer(object):
@@ -238,82 +238,132 @@ def heatMap(testImageNo = 3,filterFactor=2,dataset='dataset3.pkl'):#filtersize m
     fig.tight_layout()
     plt.show()
     
-def predict(testNumber,dataset='dataset3.pkl',MEAN=True):
+def predict(testNumber=1,dataset='dataset3.pkl',MEAN=True,img=None):
     """
     An example of how to load a trained model and use it
     to predict labels.
     """
-    
+    print('start of predict')
     rng = numpy.random.RandomState(23455)
     finalSize = 200
     index = T.lscalar()
+    print('start of predict')
     x = T.matrix('x')   # the data is presented as rasterized images
     y = T.ivector('y')
     # load the saved model
     #layer4 = pickle.load(open('best_model.pkl'))
     basePath = r'C:\Users\Matt\Desktop\DogProj\data'
-    f = open(os.path.join(basePath,'best_model.pkl'), 'rb')
-    layer4.W,layer4.b,layer3.W,layer3.b,layer2.W,layer2.b,layer1.W,layer1.b,layer0.W,layer0.b,validHolder,trainHolder = pickle.load(f) # 
-    print('blah')
-    print(numpy.array(layer0.W.get_value())[3,0,...])
-    f.close()
-    # compile a predictor function
+    print('blaaaaa')
     
+    
+    with open(os.path.join(basePath,'final_modelWEB.pkl'), 'rb') as blob:
+        print(blob)
+        print('lplpl')
+        f = loads(blob.read())
+        print('loplop')
+        print(len(f))
+        [layer4_W,layer4_b,layer3_W,layer3_b,layer2_W,layer2_b,layer1_W,layer1_b,layer0_W,layer0_b,validHolder,trainHolder] = f
+        print('pi')
+    
+    #with open(os.path.join(basePath,'final_modelWEB.pkl'), 'rb') as blob:
+    
+    #    a = loads(blob.read())
+    
+    #f = open(os.path.join(basePath,'best_modelWEB.pkl'), 'rb')
+    #print(f)
+    #a = pickle.load(f)
+    #print(a)
+    #layer4,layer3,layer2,layer1,layer0,validHolder,trainHolder = pickle.load(f) # 
+    print('blah')
+    #print(numpy.array(layer0.W.get_value())[3,0,...])
+    #f.close()
+    # compile a predictor function
+    print('2start of predict')
     # We can test it on some examples from test test
     ##dataset='dataset3.pkl'
-    dataset = os.path.join(basePath,dataset)
-    datasets = load_data(dataset)
-    test_set_x, test_set_y = datasets[2]
-    valid_set_x,valid_set_y = datasets[1]
-    print(numpy.array(valid_set_y))
+    if img != None:
+        print('blah')
+        #test_set_y = (1) 
+        #im = Image.open(img).convert(mode='L')
+        print(img)
+        test_set_x,test_set_y,a,b,c,d=cropImages(allFilePaths=img)
+        test_set = (test_set_x[:],test_set_y[:])
+        print('loaddy')
+        datasets = load_data(dataset,actualData=test_set)
+        test_set_x, test_set_y = datasets[2]
+        #valid_set_x, valid_set_y = shared_dataset(valid_set)
+        #train_set_x, train_set_y = shared_dataset(train_set)
+        print(type(test_set_x))
+        print(numpy.array((test_set_y)))
+        test_set_x = test_set_x.get_value()
+        #test_set_y = test_set_y.get_value()
+    else:
+        dataset = os.path.join(basePath,dataset)
+        print(dataset)
+        datasets = load_data(dataset)
+        test_set_x, test_set_y = datasets[2]
+        valid_set_x,valid_set_y = datasets[1]
+        trainx,trainy = datasets[0]
+        print(type(trainx))
+        print(type(trainy))
+        print(numpy.array((trainy)))
+        
+        test_set_x = test_set_x.get_value()
+        
+        print(numpy.array(valid_set_y))
+    #datasets = load_data(dataset)
+    #v,test_set_y= datasets[2]
     #test_set_x = test_set_x.get_value()
     if MEAN == True:
-        test_set_x.set_value(test_set_x.get_value(borrow=True)-numpy.mean(test_set_x.get_value(borrow=True)))
-    test_set_x = test_set_x.get_value()
+        test_set_x = test_set_x-numpy.mean(test_set_x)
+        ##test_set_x.set_value(test_set_x.get_value(borrow=True)-numpy.mean(test_set_x.get_value(borrow=True)))
+    #test_set_x = test_set_x.get_value()
     layer0_input = x.reshape((testNumber, 1, 200, 200))
+    print('3start of predict')
     layer0new = LeNetConvPoolLayer(
         rng,
         input=layer0_input,
-        image_shape=layer0.image_shape,
-        filter_shape=layer0.filter_shape, #5,5 before
+        image_shape=(1,1,200,200),#layer0.image_shape,
+        filter_shape=(20,1,9,9),#layer0.filter_shape, #5,5 before
         poolsize=(2, 2)
     )
-    layer0new.W.set_value(layer0.W.get_value())
-    layer0new.b.set_value(layer0.b.get_value())
+    layer0new.W.set_value(layer0_W)
+    layer0new.b.set_value(layer0_b)
     layer1new = LeNetConvPoolLayer(
         rng,
         input=layer0new.output,
-        image_shape=layer1.image_shape,
-        filter_shape=layer1.filter_shape,
+        image_shape=(1,20,96,96),#layer1.image_shape,
+        filter_shape=(50,20,9,9),#layer1.filter_shape,
         poolsize=(2, 2)
     )
-    layer1new.W.set_value(layer1.W.get_value())
-    layer1new.b.set_value(layer1.b.get_value())
+    layer1new.W.set_value(layer1_W)
+    layer1new.b.set_value(layer1_b)
     layer2new = LeNetConvPoolLayer(
         rng,
         input=layer1new.output,
-        image_shape=layer2.image_shape,
-        filter_shape=layer2.filter_shape,
+        image_shape=(1,50,44,44),#layer2.image_shape,
+        filter_shape=(50,50,9,9),#layer2.filter_shape,
         poolsize=(2, 2)
     )
-    layer2new.W.set_value(layer2.W.get_value())
-    layer2new.b.set_value(layer2.b.get_value())
+    layer2new.W.set_value(layer2_W)
+    layer2new.b.set_value(layer2_b)
     layer3_input = layer2new.output.flatten(2)
     layer3new = HiddenLayer(
         rng,
         input=layer3_input,
-        n_in=layer3.n_in,
-        n_out=layer3.n_out,#was 50, isn't this batch_size? nope no. hidden units
+        n_in=50*18*18,#layer3.n_in,
+        n_out=81,#layer3.n_out,#was 50, isn't this batch_size? nope no. hidden units
         activation=T.tanh
     )
-    layer3new.W.set_value(layer3.W.get_value())
-    layer3new.b.set_value(layer3.b.get_value())
-    layer4new = LogisticRegression(rng,input=layer3new.output, n_in=layer3.n_out, n_out=2)
-    layer4new.W.set_value(layer4.W.get_value())
-    layer4new.b.set_value(layer4.b.get_value())
+    layer3new.W.set_value(layer3_W)
+    layer3new.b.set_value(layer3_b)
+    layer4new = LogisticRegression(rng,input=layer3new.output, n_in=81, n_out=2)
+    layer4new.W.set_value(layer4_W)
+    layer4new.b.set_value(layer4_b)
+    print('before func')
     test_model = theano.function(
         [index],
-        [layer4new.y_pred,y,layer4new.p_y_given_x,x,layer0.W,layer1.W,layer2.W,test_set_y],
+        [layer4new.y_pred,y,layer4new.p_y_given_x,x,layer0new.W,layer1new.W,layer2new.W,test_set_y],
         givens={
             x: test_set_x[0:testNumber,...],
             y: test_set_y[0:testNumber
@@ -423,6 +473,7 @@ def predict(testNumber,dataset='dataset3.pkl',MEAN=True):
     #.plot(validHolder)
     #plt.plot(trainHolder)
     #plt.show()
+    print('end of predict')
     return(predicted_values[2][:,y[0]],validHolder,predicted_values[2][testNumber-1,y[testNumber-1]])
     
     
@@ -431,7 +482,7 @@ def inspect_inputs(i, node, fn):
 
 def inspect_outputs(i, node, fn):
     print( "output(s) value(s):", [output[0] for output in fn.outputs])    
-def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
+def evaluate_lenet5(learning_rate=0.01, n_epochs=20,
                     dataset='dataset3.pkl',
                     nkerns=[20, 50,50], batch_size=10,
                     L1Value=0.00005,L2Value=0.0003):#nkerns should be 20,50,50, was 2,2,2 then 5,5,5 (slower cz more weights)
@@ -610,9 +661,7 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
         layer2.W,layer3.W,layer4.W,layer0.output,layer4.b,layer4.p_y_given_x,#6
         y,layer4.errors(y),layer0.preOutput,layer1.preOutput,layer2.preOutput,#5
         layer0.output,layer2.output,layer3.preOutput,layer4.preOutput,#4
-        layer4.W,layer4.b,layer4.input,test_set_y,#4
-        layer0.b,layer1.b,layer2.b,layer3.b,layer4.b],#5
-        
+        layer4.W,layer4.b,layer4.input,test_set_y],#4
         updates=updates,
         givens={
             x: train_set_x[index * batch_size: (index + 1) * batch_size],
@@ -667,10 +716,6 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
             if iter % 100 == 0:
                 print( 'training @ iter = ', iter)
             cost_ij = train_model(minibatch_index)
-            print('bbbb')
-            print((layer4.W))
-            print(numpy.array(cost_ij[7]))
-            print(cost_ij[7].shape)
             print('test set y')
             print(numpy.array(cost_ij[23]))
             print()
@@ -880,11 +925,8 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
                            'best model %f %%') %
                           (epoch, minibatch_index + 1, n_train_batches,
                            test_score * 100.))
-                    with open(os.path.join(basePath,'best_modelWEB.pkl'), 'wb') as f:
-                        pickle.dump([numpy.array(cost_ij[7]),numpy.array(cost_ij[28]),
-            numpy.array(cost_ij[6]),numpy.array(cost_ij[27]),numpy.array(cost_ij[5]),
-            numpy.array(cost_ij[26]),numpy.array(cost_ij[4]),numpy.array(cost_ij[25]),
-            numpy.array(cost_ij[3]),numpy.array(cost_ij[24]),validHolder,trainHolder], f)
+                    with open(os.path.join(basePath,'best_model.pkl'), 'wb') as f:
+                        pickle.dump([layer4,layer3,layer2,layer1,layer0,validHolder,trainHolder], f)
               
             if iter >150000:
                 break
@@ -895,11 +937,8 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
         trainHolder.append(sum(costHolder)/len(costHolder)) 
         print('TrainHolder : ')
         print(trainHolder)
-        with open(os.path.join(basePath,'final_modelWEB.pkl'), 'wb') as f:
-            pickle.dump([numpy.array(cost_ij[7]),numpy.array(cost_ij[28]),
-            numpy.array(cost_ij[6]),numpy.array(cost_ij[27]),numpy.array(cost_ij[5]),
-            numpy.array(cost_ij[26]),numpy.array(cost_ij[4]),numpy.array(cost_ij[25]),
-            numpy.array(cost_ij[3]),numpy.array(cost_ij[24]),validHolder,trainHolder], f)
+        with open(os.path.join(basePath,'final_model.pkl'), 'wb') as f:
+            pickle.dump([layer4,layer3,layer2,layer1,layer0,validHolder,trainHolder], f)
     end_time = timeit.default_timer()
     print('Optimization complete.')
     print((params0+params1))
@@ -926,10 +965,10 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
     #plt.imshow(filterHolder[0], cmap = cm.Greys_r, interpolation="nearest")
     #print(filterHolder)
     plt.show()
-   
+    
 if __name__ == '__main__':
-    evaluate_lenet5()
-    #pred,validHolder = predict(260)
+    #evaluate_lenet5()
+    pred,validHolder,l = predict(12)#img='C:\\Users\\Matt\\Desktop\\DogProj\\ButterflyPhotos\\testing_BTrue\\000abefe-942.JPG')
     #heatMap()
 
 

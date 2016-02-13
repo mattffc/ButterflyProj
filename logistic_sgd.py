@@ -215,7 +215,7 @@ class LogisticRegression(object):
             raise NotImplementedError()
 
 
-def load_data(dataset):
+def load_data(dataset,actualData=None):
     ''' Loads the dataset
 
     :type dataset: string
@@ -263,7 +263,8 @@ def load_data(dataset):
     f = open(dataset, 'rb')
     train_set, valid_set, test_set = pickle.load(f)
     f.close()
-    
+    if actualData != None:
+        train_set, valid_set, test_set = actualData,actualData,actualData
     
     #train_set, valid_set, test_set format: tuple(input, target)
     #input is an numpy.ndarray of 2 dimensions (a matrix)

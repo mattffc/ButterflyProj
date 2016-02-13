@@ -30,8 +30,10 @@ import numpy
 import theano
 import theano.tensor as T
 
-
 from logistic_sgd import LogisticRegression, load_data
+#from leNetpack import logistic_sgd#.LogisticRegression as logistic_sgd
+#from logistic_sgd import LogisticRegression
+#from leNetpack import logistic_sgd#.load_data as load_data
 
 
 # start-snippet-1
