@@ -25,10 +25,11 @@ import os
 import sys
 import timeit
 import copy
-import codecs, json 
+import json 
+import h5py
 
 import numpy
-import pickle
+import cPickle as pickle
 import theano
 import theano.tensor as T
 import matplotlib.cm as cm
@@ -178,6 +179,8 @@ def heatMap(testImageNo = 3,filterFactor=2,dataset='dataset3.pkl'):#filtersize m
     else:
         print('error')
     globalPath = r'C:\Users\Matt\Desktop\DogProj\scripts\DogProjScripts'
+    #with open( os.path.join(basePath,"blockData.pkl"), "w" ) as file:
+    #    json.dump(dataset, file)
     pickle.dump( dataset, open( os.path.join(basePath,"blockData.pkl"), "wb" ) ) # needed
     imgTest_image = Image.fromarray((test_image-numpy.min(test_image))*255)
     print(numpy.min(test_image))
@@ -239,7 +242,7 @@ def heatMap(testImageNo = 3,filterFactor=2,dataset='dataset3.pkl'):#filtersize m
     fig.tight_layout()
     plt.show()
     
-def predict(testNumber,dataset='dataset3.pkl',MEAN=True):
+def predict(testNumber,dataset='datasetpy2.pkl',MEAN=True):
     """
     An example of how to load a trained model and use it
     to predict labels.
@@ -251,17 +254,28 @@ def predict(testNumber,dataset='dataset3.pkl',MEAN=True):
     x = T.matrix('x')   # the data is presented as rasterized images
     y = T.ivector('y')
     # load the saved model
-    #layer4 = pickle.load(open('best_model.pkl'))
+    #layer4 = pickle.load(open('best_model.json'))
     basePath = r'C:\Users\Matt\Desktop\DogProj\data'
-    f = open(os.path.join(basePath,'best_model.pkl'), 'rb')
-    layer4.W,layer4.b,layer3.W,layer3.b,layer2.W,layer2.b,layer1.W,layer1.b,layer0.W,layer0.b,validHolder,trainHolder = pickle.load(f) # 
-    print('blah')
-    print(numpy.array(layer0.W.get_value())[3,0,...])
-    f.close()
+    #f = open(os.path.join(basePath,'best_model.json'))
+    #with open(os.path.join(basePath,'best_modelWEB.npy'), 'rb') as file:
+        #json = json.load(file)
+        #file.close()
+    with open(os.path.join(basePath,'final_modelWEBpy2.pkl'), 'rb') as file:
+        file.close()
+    #loaded = pickle.load((os.path.join(basePath,'final_modelWEBpy2.pkl'),'rb'))
+    #print(loaded)
+    f = open(os.path.join(basePath,'best_modelWEBpy2.pkl'), 'rb')
+    #file.close()
+    #print(len(json))
+    [layer4_W,layer4_b,layer3_W,layer3_b,layer2_W,layer2_b,layer1_W,layer1_b,layer0_W,layer0_b,validHolder,trainHolder] = pickle.load(f)
+    #layer4.W,layer4.b,layer3.W,layer3.b,layer2.W,layer2.b,layer1.W,layer1.b,layer0.W,layer0.b,validHolder,trainHolder = pickle.load(f) # 
+    #print('blah')
+    #print(numpy.array(layer0.W.get_value())[3,0,...])
+    #file.close()
     # compile a predictor function
     
     # We can test it on some examples from test test
-    ##dataset='dataset3.pkl'
+    ##dataset='dataset3.json'
     dataset = os.path.join(basePath,dataset)
     datasets = load_data(dataset)
     test_set_x, test_set_y = datasets[2]
@@ -275,46 +289,46 @@ def predict(testNumber,dataset='dataset3.pkl',MEAN=True):
     layer0new = LeNetConvPoolLayer(
         rng,
         input=layer0_input,
-        image_shape=layer0.image_shape,
-        filter_shape=layer0.filter_shape, #5,5 before
+        image_shape=(1,1,200,200),#layer0.image_shape,
+        filter_shape=(20,1,9,9),#layer0.filter_shape, #5,5 before
         poolsize=(2, 2)
     )
-    layer0new.W.set_value(layer0.W.get_value())
-    layer0new.b.set_value(layer0.b.get_value())
+    layer0new.W.set_value(layer0_W)
+    layer0new.b.set_value(layer0_b)
     layer1new = LeNetConvPoolLayer(
         rng,
         input=layer0new.output,
-        image_shape=layer1.image_shape,
-        filter_shape=layer1.filter_shape,
+        image_shape=(1,20,96,96),#layer1.image_shape,
+        filter_shape=(50,20,9,9),#layer1.filter_shape,
         poolsize=(2, 2)
     )
-    layer1new.W.set_value(layer1.W.get_value())
-    layer1new.b.set_value(layer1.b.get_value())
+    layer1new.W.set_value(layer1_W)
+    layer1new.b.set_value(layer1_b)
     layer2new = LeNetConvPoolLayer(
         rng,
         input=layer1new.output,
-        image_shape=layer2.image_shape,
-        filter_shape=layer2.filter_shape,
+        image_shape=(1,50,44,44),#layer2.image_shape,
+        filter_shape=(50,50,9,9),#layer2.filter_shape,
         poolsize=(2, 2)
     )
-    layer2new.W.set_value(layer2.W.get_value())
-    layer2new.b.set_value(layer2.b.get_value())
+    layer2new.W.set_value(layer2_W)
+    layer2new.b.set_value(layer2_b)
     layer3_input = layer2new.output.flatten(2)
     layer3new = HiddenLayer(
         rng,
         input=layer3_input,
-        n_in=layer3.n_in,
-        n_out=layer3.n_out,#was 50, isn't this batch_size? nope no. hidden units
+        n_in=50*18*18,#layer3.n_in,
+        n_out=81,#layer3.n_out,#was 50, isn't this batch_size? nope no. hidden units
         activation=T.tanh
     )
-    layer3new.W.set_value(layer3.W.get_value())
-    layer3new.b.set_value(layer3.b.get_value())
-    layer4new = LogisticRegression(rng,input=layer3new.output, n_in=layer3.n_out, n_out=2)
-    layer4new.W.set_value(layer4.W.get_value())
-    layer4new.b.set_value(layer4.b.get_value())
+    layer3new.W.set_value(layer3_W)
+    layer3new.b.set_value(layer3_b)
+    layer4new = LogisticRegression(rng,input=layer3new.output, n_in=81, n_out=2)
+    layer4new.W.set_value(layer4_W)
+    layer4new.b.set_value(layer4_b)
     test_model = theano.function(
         [index],
-        [layer4new.y_pred,y,layer4new.p_y_given_x,x,layer0.W,layer1.W,layer2.W,test_set_y],
+        [layer4new.y_pred,y,layer4new.p_y_given_x,x,layer0new.W,layer1new.W,layer2new.W,test_set_y],
         givens={
             x: test_set_x[0:testNumber,...],
             y: test_set_y[0:testNumber
@@ -881,26 +895,50 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
                            'best model %f %%') %
                           (epoch, minibatch_index + 1, n_train_batches,
                            test_score * 100.))
-                    with open(os.path.join(basePath,'best_modelWEB.pkl'), 'wb') as f:
-                        pickle.dump([numpy.array(cost_ij[7]),numpy.array(cost_ij[28]),
+                    with open(os.path.join(basePath,'best_modelWEB.npz'),'wb') as file:
+                        numpy.savez(file,[numpy.array(cost_ij[7]),numpy.array(cost_ij[28]),
             numpy.array(cost_ij[6]),numpy.array(cost_ij[27]),numpy.array(cost_ij[5]),
             numpy.array(cost_ij[26]),numpy.array(cost_ij[4]),numpy.array(cost_ij[25]),
-            numpy.array(cost_ij[3]),numpy.array(cost_ij[24]),validHolder,trainHolder], f)
-              
+            numpy.array(cost_ij[3]),numpy.array(cost_ij[24]),validHolder,trainHolder])
+                    file.close()  
             if iter >150000:
                 break
             if patience <= iter:
                 a=1
                 #done_looping = True
                 #break
+            break
         trainHolder.append(sum(costHolder)/len(costHolder)) 
         print('TrainHolder : ')
         print(trainHolder)
-        with open(os.path.join(basePath,'final_modelWEB.pkl'), 'wb') as f:
-            pickle.dump([numpy.array(cost_ij[7]),numpy.array(cost_ij[28]),
+        a = [(numpy.array(cost_ij[7]),numpy.array(cost_ij[28]),
             numpy.array(cost_ij[6]),numpy.array(cost_ij[27]),numpy.array(cost_ij[5]),
             numpy.array(cost_ij[26]),numpy.array(cost_ij[4]),numpy.array(cost_ij[25]),
-            numpy.array(cost_ij[3]),numpy.array(cost_ij[24]),validHolder,trainHolder], f)
+            numpy.array(cost_ij[3]),numpy.array(cost_ij[24]),numpy.array(validHolder),
+            numpy.array(trainHolder))]
+        a= [(numpy.array(cost_ij[7]),numpy.array(cost_ij[28]))]
+        print(type(a))
+        print((a[0][0].shape))
+        b = numpy.array([1,2,3])
+        b= numpy.array([b,[1,2,3,4]])
+        print(type(b))
+        print((b.shape))
+        
+        h5f = h5py.File(os.path.join(basePath,'final_modelWEB7.h5'),'w')
+        h5f.create_dataset('dataset_1',data=b)
+        h5f.close()
+        l=lp
+        '''
+        with open(os.path.join(basePath,'final_modelWEB.npy'),'wb') as file:
+            numpy.save(file,[numpy.array(cost_ij[7]),numpy.array(cost_ij[28]),
+            numpy.array(cost_ij[6]),numpy.array(cost_ij[27]),numpy.array(cost_ij[5]),
+            numpy.array(cost_ij[26]),numpy.array(cost_ij[4]),numpy.array(cost_ij[25]),
+            numpy.array(cost_ij[3]),numpy.array(cost_ij[24]),validHolder,trainHolder],allow_pickle=False)
+        file.close()
+        '''
+        with open(os.path.join(basePath,'testnpy.npy'),'wb') as file:
+            numpy.save(file,[1,2])
+        file.close()
     end_time = timeit.default_timer()
     print('Optimization complete.')
     print((params0+params1))
@@ -929,8 +967,8 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
     plt.show()
    
 if __name__ == '__main__':
-    evaluate_lenet5()
-    #pred,validHolder = predict(260)
+    #evaluate_lenet5()
+    pred,validHolder,l = predict(260)
     #heatMap()
 
 

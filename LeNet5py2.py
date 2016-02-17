@@ -28,13 +28,13 @@ import copy
 import codecs, json 
 
 import numpy
-import pickle
+import cPickle as pickle
 import theano
 import theano.tensor as T
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from theano.tensor.signal import downsample
+from theano.tensor.signal import downsample# this has apparently moved
 from theano.tensor.nnet import conv
 '''
 from leNetpack import logistic_sgd.LogisticRegression as logistic_sgd
@@ -239,7 +239,7 @@ def heatMap(testImageNo = 3,filterFactor=2,dataset='dataset3.pkl'):#filtersize m
     fig.tight_layout()
     plt.show()
     
-def predict(testNumber,dataset='dataset3.pkl',MEAN=True):
+def predict(testNumber,dataset='datasetpy2.pkl',MEAN=True):
     """
     An example of how to load a trained model and use it
     to predict labels.
@@ -253,13 +253,14 @@ def predict(testNumber,dataset='dataset3.pkl',MEAN=True):
     # load the saved model
     #layer4 = pickle.load(open('best_model.pkl'))
     basePath = r'C:\Users\Matt\Desktop\DogProj\data'
-    f = open(os.path.join(basePath,'best_model.pkl'), 'rb')
-    layer4.W,layer4.b,layer3.W,layer3.b,layer2.W,layer2.b,layer1.W,layer1.b,layer0.W,layer0.b,validHolder,trainHolder = pickle.load(f) # 
+    f = open(os.path.join(basePath,'best_modelWEBpy2.pkl'), 'rb')
+    [layer4_W,layer4_b,layer3_W,layer3_b,layer2_W,layer2_b,layer1_W,layer1_b,layer0_W,layer0_b,validHolder,trainHolder] = pickle.load(f) # 
     print('blah')
-    print(numpy.array(layer0.W.get_value())[3,0,...])
+    #print(numpy.array(layer0.W.get_value())[3,0,...])
     f.close()
     # compile a predictor function
-    
+    #print(layer4_W)
+    #l=lp
     # We can test it on some examples from test test
     ##dataset='dataset3.pkl'
     dataset = os.path.join(basePath,dataset)
@@ -271,7 +272,10 @@ def predict(testNumber,dataset='dataset3.pkl',MEAN=True):
     if MEAN == True:
         test_set_x.set_value(test_set_x.get_value(borrow=True)-numpy.mean(test_set_x.get_value(borrow=True)))
     test_set_x = test_set_x.get_value()
+    print(test_set_x.shape)
+    
     layer0_input = x.reshape((testNumber, 1, 200, 200))
+    '''
     layer0new = LeNetConvPoolLayer(
         rng,
         input=layer0_input,
@@ -323,7 +327,58 @@ def predict(testNumber,dataset='dataset3.pkl',MEAN=True):
         on_unused_input='warn'
     )
     print('test_set_y')
-    
+    '''
+    layer0new = LeNetConvPoolLayer(
+        rng,
+        input=layer0_input,
+        image_shape=(testNumber,1,200,200),#layer0.image_shape,
+        filter_shape=(20,1,9,9),#layer0.filter_shape, #5,5 before
+        poolsize=(2, 2)
+    )
+    layer0new.W.set_value(layer0_W)
+    layer0new.b.set_value(layer0_b)
+    layer1new = LeNetConvPoolLayer(
+        rng,
+        input=layer0new.output,
+        image_shape=(testNumber,20,96,96),#layer1.image_shape,
+        filter_shape=(50,20,9,9),#layer1.filter_shape,
+        poolsize=(2, 2)
+    )
+    layer1new.W.set_value(layer1_W)
+    layer1new.b.set_value(layer1_b)
+    layer2new = LeNetConvPoolLayer(
+        rng,
+        input=layer1new.output,
+        image_shape=(testNumber,50,44,44),#layer2.image_shape,
+        filter_shape=(50,50,9,9),#layer2.filter_shape,
+        poolsize=(2, 2)
+    )
+    layer2new.W.set_value(layer2_W)
+    layer2new.b.set_value(layer2_b)
+    layer3_input = layer2new.output.flatten(2)
+    layer3new = HiddenLayer(
+        rng,
+        input=layer3_input,
+        n_in=50*18*18,#layer3.n_in,
+        n_out=81,#layer3.n_out,#was 50, isn't this batch_size? nope no. hidden units
+        activation=T.tanh
+    )
+    layer3new.W.set_value(layer3_W)
+    layer3new.b.set_value(layer3_b)
+    layer4new = LogisticRegression(rng,input=layer3new.output, n_in=81, n_out=2)
+    layer4new.W.set_value(layer4_W)
+    layer4new.b.set_value(layer4_b)
+    print('before func')
+    test_model = theano.function(
+        [index],
+        [layer4new.y_pred,y,layer4new.p_y_given_x,x,layer0new.W,layer1new.W,layer2new.W,test_set_y],
+        givens={
+            x: test_set_x[0:testNumber,...],
+            y: test_set_y[0:testNumber
+            ]
+        },
+        on_unused_input='warn'
+    )
     predicted_values = test_model(1)
     print(numpy.array(predicted_values[7]))
     
@@ -414,16 +469,17 @@ def predict(testNumber,dataset='dataset3.pkl',MEAN=True):
     predPrint = numpy.hstack([predicted_values[2],CountTrans])
     print(predPrint)
     print(predicted_values[0])
-    print('test error = '+str(sum(predicted_values[0]!=y)/y.shape[0]))
+    print('test error = '+str(float(sum(predicted_values[0]!=y))/y.shape[0]))
     print('Actual values:')
     print(y)
     print('herehererererererererererererere')
     print(predicted_values[2][:,y[0]].shape)
     print(validHolder)
+    print(trainHolder)
     print(predicted_values[2])
-    #.plot(validHolder)
-    #plt.plot(trainHolder)
-    #plt.show()
+    plt.plot(validHolder)
+    plt.plot(trainHolder)
+    plt.show()
     return(predicted_values[2][:,y[0]],validHolder,predicted_values[2][testNumber-1,y[testNumber-1]])
     
     
@@ -432,8 +488,8 @@ def inspect_inputs(i, node, fn):
 
 def inspect_outputs(i, node, fn):
     print( "output(s) value(s):", [output[0] for output in fn.outputs])    
-def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
-                    dataset='dataset3.pkl',
+def evaluate_lenet5(learning_rate=0.01, n_epochs=10,
+                    dataset='datasetpy2.pkl',
                     nkerns=[20, 50,50], batch_size=10,
                     L1Value=0.00005,L2Value=0.0003):#nkerns should be 20,50,50, was 2,2,2 then 5,5,5 (slower cz more weights)
     """ Demonstrates lenet on MNIST dataset
@@ -459,13 +515,19 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
     train_set_x, train_set_y = datasets[0]
     valid_set_x, valid_set_y = datasets[1]
     test_set_x, test_set_y = datasets[2]
+    #train_set_x.set_value(train_set_x.get_value(borrow=True).astype(numpy.float))
+    #train_set_y = train_set_y.astype(numpy.float)
+    #valid_set_x = valid_set_x.astype(numpy.float)
+    #valid_set_y = valid_set_y.astype(numpy.float)
+    #test_set_y = test_set_y.astype(numpy.float)
+    #train_set_x = train_set_x.astype(numpy.float)
     print('train set x')
     print(numpy.max(train_set_x.get_value(borrow=True)))
     print(numpy.min(train_set_x.get_value(borrow=True)))
     print((train_set_x.get_value(borrow=True)).sum()/((train_set_x.get_value(borrow=True).shape[1])*(train_set_x.get_value(borrow=True).shape[0])))
     #for L in range(train_set_x.get_value(borrow=True).shape[1]):
     #    train_set_x.set_value(train_set_x.get_value(borrow=True)[L,...]-numpy.mean(train_set_x.get_value(borrow=True)[L,...]))
-    #train_set_x.set_value(train_set_x.get_value(borrow=True)-numpy.mean(train_set_x.get_value(borrow=True)))
+    train_set_x.set_value(train_set_x.get_value(borrow=True)-numpy.mean(train_set_x.get_value(borrow=True)))
     a = (train_set_x.get_value(borrow=True) > 0)#.astype(float)
     b = (train_set_x.get_value(borrow=True) < 0)#.astype(float)
     #train_set_x.set_value(a)
@@ -480,6 +542,7 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
     print(numpy.max(train_set_x.get_value(borrow=True)))
     print(numpy.min(train_set_x.get_value(borrow=True)))
     print((train_set_x.get_value(borrow=True)).sum()/((train_set_x.get_value(borrow=True).shape[1])*(train_set_x.get_value(borrow=True).shape[0])))
+    #l=lp
     # compute number of minibatches for training, validation and testing
     n_train_batches = train_set_x.get_value(borrow=True).shape[0]
     n_valid_batches = valid_set_x.get_value(borrow=True).shape[0]
@@ -612,7 +675,8 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
         y,layer4.errors(y),layer0.preOutput,layer1.preOutput,layer2.preOutput,#5
         layer0.output,layer2.output,layer3.preOutput,layer4.preOutput,#4
         layer4.W,layer4.b,layer4.input,test_set_y,#4
-        layer0.b,layer1.b,layer2.b,layer3.b,layer4.b],#5
+        layer0.b,layer1.b,layer2.b,layer3.b,layer4.b,layer0.input,#6
+        layer1.output],#1
         
         updates=updates,
         givens={
@@ -753,8 +817,15 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
             '''
             #totFilter = numpy.array(cost_ij[8][0,0,...])
             #print(filter0)
-            #plt.imshow(filter0, cmap = cm.Greys_r,interpolation="nearest")
-            #plt.show()
+            print('layer 0 input')
+            '''
+            plt.imshow(numpy.array(cost_ij[29][0,0,...]), cmap = cm.Greys_r,interpolation="nearest")
+            plt.show()
+            plt.imshow(numpy.array(cost_ij[16][0,0,...]), cmap = cm.Greys_r,interpolation="nearest")
+            plt.show()
+            plt.imshow(numpy.array(cost_ij[30][0,0,...]), cmap = cm.Greys_r,interpolation="nearest")
+            plt.show()
+            '''
             filterHolder.append(totFilter)#=filter0
             costHolder.append(numpy.mean(cost_ij[12]))
             if iter>1:
@@ -782,6 +853,7 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
                 #print(filterHolder[int(iter-1)][3].shape)
                 '''
                 print('filterHolders')
+                #print(filterHolder.shape)
                 print(numpy.mean(filterHolder[int(iter)][0:9,0:9]-filterHolder[int(iter)-1][0:9,0:9]))
                 print(numpy.mean(filterHolder[int(iter)][0:9,9:18]-filterHolder[int(iter)-1][0:9,9:18]))
                 print(numpy.mean(filterHolder[int(iter)][0:9,18:27]-filterHolder[int(iter)-1][0:9,18:27]))
@@ -822,7 +894,13 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
             #f = theano.function([x], x * 5)
             #f_with_print = theano.function([x], x_printed * 5)
             #assert numpy.all( f_with_print([1, 2, 3]) == [5, 10, 15])
-            
+            #print('layer 4 weights')
+            #print(cost_ij[7])
+            #print(cost_ij[6])
+            #print(cost_ij[5])
+            #print(cost_ij[4])
+            #print(cost_ij[3])
+            #print('end weights')
             if (iter + 1) % validation_frequency == 0:
                 
                 if (counter3) % 5 == 0:
@@ -881,7 +959,7 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
                            'best model %f %%') %
                           (epoch, minibatch_index + 1, n_train_batches,
                            test_score * 100.))
-                    with open(os.path.join(basePath,'best_modelWEB.pkl'), 'wb') as f:
+                    with open(os.path.join(basePath,'best_modelWEBpy2.pkl'), 'wb') as f:
                         pickle.dump([numpy.array(cost_ij[7]),numpy.array(cost_ij[28]),
             numpy.array(cost_ij[6]),numpy.array(cost_ij[27]),numpy.array(cost_ij[5]),
             numpy.array(cost_ij[26]),numpy.array(cost_ij[4]),numpy.array(cost_ij[25]),
@@ -893,10 +971,11 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
                 a=1
                 #done_looping = True
                 #break
+            
         trainHolder.append(sum(costHolder)/len(costHolder)) 
         print('TrainHolder : ')
         print(trainHolder)
-        with open(os.path.join(basePath,'final_modelWEB.pkl'), 'wb') as f:
+        with open(os.path.join(basePath,'final_modelWEBpy2.pkl'), 'wb') as f:
             pickle.dump([numpy.array(cost_ij[7]),numpy.array(cost_ij[28]),
             numpy.array(cost_ij[6]),numpy.array(cost_ij[27]),numpy.array(cost_ij[5]),
             numpy.array(cost_ij[26]),numpy.array(cost_ij[4]),numpy.array(cost_ij[25]),
@@ -929,8 +1008,8 @@ def evaluate_lenet5(learning_rate=0.01, n_epochs=1,
     plt.show()
    
 if __name__ == '__main__':
-    evaluate_lenet5()
-    #pred,validHolder = predict(260)
+    #evaluate_lenet5()
+    pred,validHolder,l = predict(250)
     #heatMap()
 
 

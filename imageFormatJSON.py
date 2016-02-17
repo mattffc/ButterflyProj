@@ -17,6 +17,7 @@ import pylab
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import pickle
+import json
 from scipy import ndimage
 from scipy.misc import imresize
 from skimage.transform import rescale, resize 
@@ -72,9 +73,7 @@ def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
         im = im[0:(im.shape[0]-(im.shape[0]*0.1)),...]#cropping 10% off bottom of image to remove most footers
         if im.shape[0]>=im.shape[1]:
             print('0pppp')
-            shrinkRatio = float(im.shape[1])/finalSize
-            print(shrinkRatio) 
-            print(im.shape)
+            shrinkRatio = im.shape[1]/finalSize
             im = resize(im,[int((1/shrinkRatio)*im.shape[0]),finalSize])
             margin = (im.shape[0]-finalSize)/2
             finalImage = im[margin:im.shape[0]-margin,...]
@@ -89,7 +88,7 @@ def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
             
         else:
             print('1')
-            shrinkRatio = float(im.shape[0])/finalSize
+            shrinkRatio = im.shape[0]/finalSize
             a=int((1/shrinkRatio)*finalSize)
             #plt.imshow(im)
             #plt.show()
@@ -111,8 +110,7 @@ def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
             print('training pic true')
             training_x[imgCounter2][:] = finalImage.flatten()
             training_y[imgCounter2] = 1
-            if imgCounter2 > 20:
-                break
+            break
         elif imgCounter2 < int(trainingNumber):
             print('training pic false')
             
@@ -174,7 +172,6 @@ if __name__ == '__main__':
     allFilePaths = []
     imgCounter1 = 0
     while imgCounter1 < trainingNumber+validationNumber+testNumber:
-        
         if imgCounter1 < int(trainingNumber/2):
             path = os.path.join(globalPath, 'training_BTrue')
             jpgFilePathsNew = (glob.glob(os.path.join(path, '*.jpg')))
@@ -184,7 +181,6 @@ if __name__ == '__main__':
             bothFilePathsNew = bothFilePathsNew[0:int(trainingNumber/2)]
             allFilePaths = allFilePaths + bothFilePathsNew
             print(str(len(allFilePaths))+'trainTrue')
-            
         elif imgCounter1 < trainingNumber:
             path = os.path.join(globalPath, 'training_BFalse')
             jpgFilePathsNew = (glob.glob(os.path.join(path, '*.jpg')))
@@ -237,11 +233,9 @@ if __name__ == '__main__':
         else:
             print('error in imgCounter1 loop')
         imgCounter1 = len(allFilePaths)
-        
         print('here')
         print(len(jpgFilePaths + pngFilePaths))    
     print(imgCounter1)
-    
     #jpgFilePaths = glob.glob(os.path.join(path, '*.jpg'))
     #pngFilePaths = glob.glob(os.path.join(path, '*.png'))
 
@@ -266,12 +260,15 @@ if __name__ == '__main__':
     dataset = [(training_x,training_y),(validation_x,validation_y),(test_x,test_y)]
     globalPath = r'C:\Users\Matt\Desktop\DogProj\scripts\DogProjScripts'
     basePath = r'C:\Users\Matt\Desktop\DogProj\data'
-    print(type(test_x[0][0]))
-    #test_x = test_x.astype(np.int8)
-    print(type(test_x[0][0]))
-    print(np.max(training_x))
-    print(np.min(training_x))
-    #pickle.dump( dataset, open( os.path.join(basePath,"datasettt.pkl"), "wb" ) ) # needed
+    #print(type(training_x))
+    #training_x=training_x.tolist()
+    #print(type(training_x))
+    #print(dataset)
+    #dataset = (dataset[0][0].tolist())
+    #print(dataset)
+    with open(os.path.join(basePath,"dataset3.pkl"),'wb') as file:
+        #json.dump(dataset, file)
+        pickle.dump( dataset, file ) # needed
 
 
     '''

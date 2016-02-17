@@ -16,13 +16,13 @@ import random
 import pylab
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-import pickle
+import cPickle as pickle
 from scipy import ndimage
 from scipy.misc import imresize
 from skimage.transform import rescale, resize 
 
 def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
-    trainingNumber = 2250,validationNumber = 140,testNumber = 260):
+    trainingNumber = 5,validationNumber = 140,testNumber = 260):
     #print(allFilePaths)
     training_x = np.zeros([trainingNumber,finalSize*finalSize])
     training_y = np.zeros([trainingNumber])
@@ -66,7 +66,12 @@ def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
             print('image ' + str(imgCounter2) + ' is truncated and not loaded')
             imagesRejected += 1
         im = np.asarray(im)
-        im = (im/255).astype(float)
+        print(np.mean(im))
+        print(np.max(im))
+        im = (im).astype(float)/255
+        print(np.max(im))
+        print(np.mean(im))
+        
         #plt.imshow(im, cmap = cm.Greys_r)
         #plt.show()
         im = im[0:(im.shape[0]-(im.shape[0]*0.1)),...]#cropping 10% off bottom of image to remove most footers
@@ -76,7 +81,7 @@ def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
             print(shrinkRatio) 
             print(im.shape)
             im = resize(im,[int((1/shrinkRatio)*im.shape[0]),finalSize])
-            margin = (im.shape[0]-finalSize)/2
+            margin = (float(im.shape[0])-finalSize)/2
             finalImage = im[margin:im.shape[0]-margin,...]
             print(finalImage.shape)
             print(margin)
@@ -95,7 +100,7 @@ def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
             #plt.show()
             im = resize(im,[finalSize,int((1/shrinkRatio)*im.shape[1])])
             #im = resize(im,1/shrinkRatio)
-            margin = (im.shape[1]-finalSize)/2
+            margin = (float(im.shape[1])-finalSize)/2
             #emptyImage = np.zeros([finalSize,finalSize])
             #emptyImage[margin:finalSize-margin,:] = emptyImage[margin:finalSize-margin,:] + im
             #finalImage = emptyImage
@@ -109,10 +114,16 @@ def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
         print('flattening section')
         if imgCounter2 < int(trainingNumber/2):
             print('training pic true')
+            print(training_x.shape)
+            print(imgCounter2)
+            print(finalImage.shape)
+            print(np.mean(finalImage))
+            
             training_x[imgCounter2][:] = finalImage.flatten()
             training_y[imgCounter2] = 1
-            if imgCounter2 > 20:
-                break
+            #if imgCounter2 >20:
+                
+            #    break
         elif imgCounter2 < int(trainingNumber):
             print('training pic false')
             
@@ -174,7 +185,6 @@ if __name__ == '__main__':
     allFilePaths = []
     imgCounter1 = 0
     while imgCounter1 < trainingNumber+validationNumber+testNumber:
-        
         if imgCounter1 < int(trainingNumber/2):
             path = os.path.join(globalPath, 'training_BTrue')
             jpgFilePathsNew = (glob.glob(os.path.join(path, '*.jpg')))
@@ -184,7 +194,6 @@ if __name__ == '__main__':
             bothFilePathsNew = bothFilePathsNew[0:int(trainingNumber/2)]
             allFilePaths = allFilePaths + bothFilePathsNew
             print(str(len(allFilePaths))+'trainTrue')
-            
         elif imgCounter1 < trainingNumber:
             path = os.path.join(globalPath, 'training_BFalse')
             jpgFilePathsNew = (glob.glob(os.path.join(path, '*.jpg')))
@@ -237,11 +246,9 @@ if __name__ == '__main__':
         else:
             print('error in imgCounter1 loop')
         imgCounter1 = len(allFilePaths)
-        
         print('here')
         print(len(jpgFilePaths + pngFilePaths))    
     print(imgCounter1)
-    
     #jpgFilePaths = glob.glob(os.path.join(path, '*.jpg'))
     #pngFilePaths = glob.glob(os.path.join(path, '*.png'))
 
@@ -251,11 +258,29 @@ if __name__ == '__main__':
     print(len(allFilePaths))
     print('oji')
 
-    training_x,training_y,validation_x,validation_y,test_x,test_y=cropImages(allFilePaths) 
-    #cropImages()   
-
-
+    training_x,training_y,validation_x,validation_y,test_x,test_y=cropImages(allFilePaths,trainingNumber=2250) 
+    #cropImages() 
+    print('ghgh')
+    print(training_x.shape)
+    print(np.max(training_x[1]))
+    print(np.min(training_x[0]))
+    print(np.mean(training_x[0]))
+    print(np.mean(training_x[:]))
+    training_x = ((training_x)*255).astype(np.uint8)
+    training_y = (training_y).astype(np.uint8)
+    validation_x = ((validation_x)*255).astype(np.uint8)
+    validation_y = (validation_y.astype)(np.uint8)
+    test_x = ((test_x)*255).astype(np.uint8)
+    test_y = (test_y).astype(np.uint8)
+    print(type(test_x[0][0]))
+    #test_x = test_x.astype(np.int8)
+    print(type(test_x[0][0]))
+    print(np.max(training_x[0]))
+    print(np.min(training_x[0]))
+    print(np.mean(training_x[0]))
+    
     training_x,training_y = shuffle_in_unison(training_x,training_y)
+    # important to re add the shuffle
     #validation_x,validation_y = shuffle_in_unison(validation_x,validation_y)
     #test_x,test_y = shuffle_in_unison(test_x,test_y)
 
@@ -263,15 +288,15 @@ if __name__ == '__main__':
     outputFilename = os.path.join(globalPath,'dataset1'+'.npz')
     #np.savez_compressed(outputFilename,training_x=training_x,training_y=training_y, \
     #validation_x=validation_x,validation_y=validation_y,test_x=test_x,test_y=test_y,)
+    
+    
     dataset = [(training_x,training_y),(validation_x,validation_y),(test_x,test_y)]
     globalPath = r'C:\Users\Matt\Desktop\DogProj\scripts\DogProjScripts'
     basePath = r'C:\Users\Matt\Desktop\DogProj\data'
-    print(type(test_x[0][0]))
-    #test_x = test_x.astype(np.int8)
-    print(type(test_x[0][0]))
-    print(np.max(training_x))
-    print(np.min(training_x))
-    #pickle.dump( dataset, open( os.path.join(basePath,"datasettt.pkl"), "wb" ) ) # needed
+    
+    
+    
+    pickle.dump( dataset, open( os.path.join(basePath,"datasetpy2.pkl"), "wb" ) ) # needed
 
 
     '''

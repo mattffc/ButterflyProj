@@ -34,12 +34,13 @@ References:
 """
 __docformat__ = 'restructedtext en'
 
-import pickle
+import cPickle as pickle
 import gzip
 import os
 import sys
 import timeit
-
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 import numpy 
 
 import theano
@@ -257,12 +258,41 @@ def load_data(dataset,actualData=None):
     print( '... loading data')
 
     # Load the dataset
-    data_set = numpy.load(dataset) # was different 
+    ####data_set = numpy.load(dataset) # was different 
     #train_set, valid_set, test_set = pickle.load(f,encoding='latin1')
     
     f = open(dataset, 'rb')
     train_set, valid_set, test_set = pickle.load(f)
     f.close()
+    print(type(train_set))
+    print(len(train_set))
+    print(type(train_set[0]))
+    print(len(train_set[0]))
+    print(type(train_set[0][0][0]))
+    print(len(train_set[0][0]))
+    
+    #print(len(train_set[0][0])
+    print('taaaat')
+    print(numpy.max(train_set[0][0][:]))
+    print(numpy.mean(train_set[0][0][:]))
+    print(numpy.mean(train_set[0][:][:]))
+    print((train_set[0][0][:]))
+    print((train_set[0][0][:]).astype(numpy.float))
+    print(train_set[0][:][:].shape)
+    print(train_set[0][0][:].shape)
+    print(train_set[0][0][0].shape)
+    #plt.imshow(numpy.array(train_set[0][0][:].reshape(numpy.sqrt((train_set[0][0][:]).shape[0]),numpy.sqrt((train_set[0][0][:].shape[0])))), cmap = cm.Greys_r,interpolation="nearest")
+    #plt.show()
+    train_set[0][0][:] = (train_set[0][0][:]).astype(numpy.float)/255
+    print(numpy.max(train_set[0][0][:]))
+    #train_set[1][0][:] = train_set[0][0][:].astype(numpy.float)
+    valid_set[0][0][:] = (valid_set[0][0][:]).astype(numpy.float)/255
+    #valid_set[1][0][:] = valid_set[0][0][:].astype(numpy.float)
+    test_set[0][0][:] = (test_set[0][0][:]).astype(numpy.float)/255
+    #test_set[1][0][:] = test_set[0][0][:].astype(numpy.float)
+    #plt.imshow(numpy.array(train_set[0][0][0]), cmap = cm.Greys_r,interpolation="nearest")
+    #plt.show()
+    
     if actualData != None:
         train_set, valid_set, test_set = actualData,actualData,actualData
     
