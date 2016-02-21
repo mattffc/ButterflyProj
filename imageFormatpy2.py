@@ -21,14 +21,14 @@ from scipy import ndimage
 from scipy.misc import imresize
 from skimage.transform import rescale, resize 
 
-def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
+def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 227,
     trainingNumber = 5,validationNumber = 140,testNumber = 260):
     #print(allFilePaths)
-    training_x = np.zeros([trainingNumber,finalSize*finalSize])
+    training_x = np.zeros([trainingNumber,finalSize*finalSize*3])
     training_y = np.zeros([trainingNumber])
-    validation_x =np.zeros([validationNumber,finalSize*finalSize])
+    validation_x =np.zeros([validationNumber,finalSize*finalSize*3])
     validation_y = np.zeros([validationNumber])
-    test_x = np.zeros([testNumber,finalSize*finalSize])
+    test_x = np.zeros([testNumber,finalSize*finalSize*3])
     test_y = np.zeros([testNumber])
     if len(allFilePaths) > 1:
         print('ok')
@@ -61,11 +61,13 @@ def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
         print('bla')
         #print(filepath)
         try:
-            im = Image.open(filepath).convert(mode='L')#.convert('1')
+            im = Image.open(filepath).convert(mode='RGB')#.convert(mode='L')
         except:
             print('image ' + str(imgCounter2) + ' is truncated and not loaded')
             imagesRejected += 1
         im = np.asarray(im)
+        print(im.shape)
+        
         print(np.mean(im))
         print(np.max(im))
         im = (im).astype(float)/255
@@ -119,7 +121,7 @@ def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
             print(finalImage.shape)
             print(np.mean(finalImage))
             
-            training_x[imgCounter2][:] = finalImage.flatten()
+            training_x[imgCounter2,...] = finalImage.reshape(finalImage.shape[0]*finalImage.shape[1]*3,order='F')#finalImage.flatten()
             training_y[imgCounter2] = 1
             #if imgCounter2 >20:
                 
@@ -127,23 +129,23 @@ def cropImages(allFilePaths=None,imgCounter2=0,imagesRejected=0,finalSize = 200,
         elif imgCounter2 < int(trainingNumber):
             print('training pic false')
             
-            training_x[imgCounter2][:] = finalImage.flatten()
+            training_x[imgCounter2][:] = finalImage.reshape(finalImage.shape[0]*finalImage.shape[1]*3,order='F')
             training_y[imgCounter2] = 0
         elif imgCounter2 < int(trainingNumber+validationNumber/2):
             print('validation pic true')
-            validation_x[imgCounter2-trainingNumber][:] = finalImage.flatten()
+            validation_x[imgCounter2-trainingNumber][:] = finalImage.reshape(finalImage.shape[0]*finalImage.shape[1]*3,order='F')
             validation_y[imgCounter2-trainingNumber] = 1
         elif imgCounter2 < int(trainingNumber+validationNumber):
             print('validation pic false')
-            validation_x[imgCounter2-trainingNumber][:] = finalImage.flatten()
+            validation_x[imgCounter2-trainingNumber][:] = finalImage.reshape(finalImage.shape[0]*finalImage.shape[1]*3,order='F')
             validation_y[imgCounter2-trainingNumber] = 0
         elif imgCounter2 < int(trainingNumber+validationNumber+testNumber/2):
             print('test pic true')
-            test_x[imgCounter2-(trainingNumber+validationNumber)][:] = finalImage.flatten()
+            test_x[imgCounter2-(trainingNumber+validationNumber)][:] = finalImage.reshape(finalImage.shape[0]*finalImage.shape[1]*3,order='F')
             test_y[imgCounter2-(trainingNumber+validationNumber)] = 1
         elif imgCounter2 < int(trainingNumber+validationNumber+testNumber):
             print('test pic false')
-            test_x[imgCounter2-(trainingNumber+validationNumber)][:] = finalImage.flatten()
+            test_x[imgCounter2-(trainingNumber+validationNumber)][:] = finalImage.reshape(finalImage.shape[0]*finalImage.shape[1]*3,order='F')
             test_y[imgCounter2-(trainingNumber+validationNumber)] = 0
         else:
             print('concatenated training, validation and test sets then \
@@ -166,18 +168,18 @@ if __name__ == '__main__':
     #levels = 5
     globalPath = r'C:\Users\Matt\Desktop\DogProj\ButterflyPhotos'
     #outputFilename = os.path.join(path,'trainingData'+str(SAMPLE_NUMBER)+'.npz')
-    finalSize = 200
+    finalSize = 227
     imageSetSize = 0
     trainRatio = 4
-    trainingNumber = 2250#1800#1800 # actually 237 / 143 beetles/// now 1200 True, 1100 False// now 1400 true, 1300 false
-    validationNumber = 140#30#260#60 #/30 of each / now 260 tot
-    testNumber = 260#300#100 #/70 of each / now 300 tot
+    trainingNumber = 30#1000#2250#1800#1800 # actually 237 / 143 beetles/// now 1200 True, 1100 False// now 1400 true, 1300 false
+    validationNumber = 30#140#30#260#60 #/30 of each / now 260 tot
+    testNumber = 30#260#300#100 #/70 of each / now 300 tot
 
-    training_x = np.zeros([trainingNumber,finalSize*finalSize])
+    training_x = np.zeros([trainingNumber,finalSize*finalSize,3])
     training_y = np.zeros([trainingNumber])
-    validation_x =np.zeros([validationNumber,finalSize*finalSize])
+    validation_x =np.zeros([validationNumber,finalSize*finalSize,3])
     validation_y = np.zeros([validationNumber])
-    test_x = np.zeros([testNumber,finalSize*finalSize])
+    test_x = np.zeros([testNumber,finalSize*finalSize,3])
     test_y = np.zeros([testNumber])
 
     jpgFilePaths = []
@@ -258,7 +260,8 @@ if __name__ == '__main__':
     print(len(allFilePaths))
     print('oji')
 
-    training_x,training_y,validation_x,validation_y,test_x,test_y=cropImages(allFilePaths,trainingNumber=2250) 
+    training_x,training_y,validation_x,validation_y,test_x,test_y=cropImages(allFilePaths,
+    trainingNumber=trainingNumber,validationNumber=validationNumber,testNumber=testNumber) 
     #cropImages() 
     print('ghgh')
     print(training_x.shape)
@@ -296,7 +299,7 @@ if __name__ == '__main__':
     
     
     
-    pickle.dump( dataset, open( os.path.join(basePath,"datasetpy2.pkl"), "wb" ) ) # needed
+    pickle.dump( dataset, open( os.path.join(basePath,"datasetAlex227test.pkl"), "wb" ) ) # needed
 
 
     '''
